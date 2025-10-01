@@ -52,6 +52,17 @@ app.post("/plans", async (req, res) => {
   res.status(201).json();
 }); // supabase table edtior db 연결
 
+app.delete("/plans", async (req, res) => {
+  const { planId } = req.body;
+  const { error } = await supabase
+    .from("tour_plan") // table
+    .delete() // 삭제
+    .eq("id", planId); // eq = equal = id가 planId
+  if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+  res.status(204).json(); // noContent
+});
 // DOM listener / server '대기' -> 특정한 요청. -> 응답.
 app.listen(port, () => {
   console.log(`서버가 ${port}번 포트로 실행 중입니다.`);
