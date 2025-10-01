@@ -209,11 +209,19 @@ async function ensemble(result) {
         model,
       });
       console.log(response.choices[0].message.content);
+      const { min_budget, max_budget } = JSON.parse(
+        response.choices[0].message.content
+      );
+      return {
+        min_budget: Number(min_budget),
+        max_budget: Number(max_budget),
+      };
     })
   );
   console.log(responses);
   return {
-    minBudget: 0,
-    maxBudget: 0,
+    // rest 연산자로 해체해서 넣어줘야함 (배열의 경우)
+    minBudget: Math.min(...responses.map((v) => v.min_budget)),
+    maxBudget: Math.max(...responses.map((v) => v.max_budget)),
   };
 }
