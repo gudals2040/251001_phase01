@@ -59,7 +59,8 @@
           removeBtn.addEventListener("click", async () => {
             // const planId = p.id;
             const { id: planId } = p;
-            const url = "http://localhost:3000/plans";
+            const url ="https://two51001-phase01-fk96.onrender.com/plans"
+            //const url = "http://localhost:3000/plans";
             const response = await fetch(url, {
               method: "DELETE", // #1
               headers: {
