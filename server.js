@@ -3,11 +3,10 @@
 const express = require("express"); // express 안에 있는 이미 구현되어 있는 코드들을 express 객체 형태로 불러오겠다
 const cors = require("cors");
 const dotenv = require("dotenv");
-const { createClient } = require("@supabase/supabase-js") // 구조분해 할당
+const { createClient } = require("@supabase/supabase-js"); // 구조분해 할당
 
 dotenv.config(); // .env -> key
 // NODE -> process.env (환경변수) // cf. env file
-
 
 const supabaseKey = process.env.SUPABASE_KEY;
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -24,6 +23,7 @@ const port = 3000; // cra. next -> express. / 5173.
 // CORS 해결을 미들웨어 적용
 app.use(cors()); // 모든 출처에 대한 허용 ( 보안적으로 바람적하지 X);
 
+app.use(express.json()) // req.body -> json.
 // get, post...
 // app.방식(접속경로, 핸들러)
 // localhost:3000/
@@ -34,6 +34,23 @@ app.get("/", (req, res) => {
   res.send("bye");
 });
 
+app.get("/plans", async (req, res) => {
+  // const response = await supabase.from("tour_plan").select("*")
+  const { data, error } = await supabase.from("tour_plan").select("*");
+  if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+  res.json(data);
+});
+
+app.post("/plans", async (req, res) => {
+  const plan = req.body;
+  const { error } = await supabase.from("tour_plan").insert(plan);
+  if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+  res.status(201).json();
+});
 // DOM listener / server '대기' -> 특정한 요청. -> 응답.
 app.listen(port, () => {
   console.log(`서버가 ${port}번 포트로 실행 중입니다.`);
