@@ -5,6 +5,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const { createClient } = require("@supabase/supabase-js"); // 구조분해 할당
 const { GoogleGenAI } = require("@google/genai");
+const { Groq } = require("groq-sdk");
 dotenv.config(); // .env -> key
 // NODE -> process.env (환경변수) // cf. env file
 
@@ -43,12 +44,21 @@ app.get("/plans", async (req, res) => {
   res.json(data);
 });
 
-app.get("/plans", async (req, res) => {
-  const { data, error } = await supabase.from("tour_plan").select("*");
+// npm install groq-sdk
+app.post("/plans", async (req, res) => {
+  const plan = req.body;
+  const result = await chaining(plan);
+  plan.ai_suggestion = result;
+  // 최종적으로 작성된 계획 -> 최소/최대 budget이 얼마나 나올까?
+  const { minBudget, maxBudget } = await ensemble(result);
+  plan.ai_min_budget = minBudget;
+  plan.ai_max_budget = maxBudget;
+
+  const { error } = await supabase.from("tour_plan").insert(plan);
   if (error) {
     return res.status(400).json({ error: error.message });
   }
-  res.json(data);
+  res.status(201).json();
 });
 
 // 1. SDK
@@ -155,6 +165,7 @@ async function chaining(plan) {
   });
   return response2.text;
 }
+
 app.delete("/plans", async (req, res) => {
   const { planId } = req.body;
   const { error } = await supabase
@@ -170,3 +181,39 @@ app.delete("/plans", async (req, res) => {
 app.listen(port, () => {
   console.log(`서버가 ${port}번 포트로 실행 중입니다.`);
 });
+
+async function ensemble(result) {
+  const groq = new Groq(); // api key -> GROQ_API_KEY -> 환경변수가 알아서 인식
+  const models = [
+    "moonshotai/kimi-k2-instruct-0905",
+    "openai/gpt-oss-120b",
+    "meta-llama/llama-4-maverick-17b-128e-instruct",
+  ];
+  const responses = await Promise.all(
+    models.map(async (model) => {
+      // https://console.groq.com/docs/structured-outputs
+      const response = await groq.chat.completions.create({
+        response_format: {
+          type: "json_object",
+        },
+        messages: [
+          {
+            role: "system",
+            content: `여행 경비 산출 전문가로, 주어진 여행 계획을 바탕으로 '원화 기준'의 숫자로만 작성된 예산을 작성하기. 응답은 JSON 형식으로 {"min_budget":"최소 예산", "max_budget": "최대 예산"}`,
+          },
+          {
+            role: "user",
+            content: result,
+          },
+        ],
+        model,
+      });
+      console.log(response.choices[0].message.content);
+    })
+  );
+  console.log(responses);
+  return {
+    minBudget: 0,
+    maxBudget: 0,
+  };
+}
