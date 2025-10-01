@@ -38,7 +38,7 @@
       // 함수
       async function renderPlans() {
         //const url = "http://localhost:3000/plans";
-        const url = "https://two51001-phase01-fk96.onrender.com/plans";
+        const url = "https://two51001-phase01-01.onrender.com/plans";
         const response = await fetch(url);
         const data = await response.json();
         console.log(data);
@@ -60,7 +60,7 @@
           removeBtn.addEventListener("click", async () => {
             // const planId = p.id;
             const { id: planId } = p;
-            const url = "https://two51001-phase01-fk96.onrender.com/plans";
+            const url = "https://two51001-phase01-01.onrender.com/plans";
             // const url = "http://localhost:3000/plans";
             const response = await fetch(url, {
               method: "DELETE", // #1
@@ -88,7 +88,7 @@
         // fromEntries -> 객체화
         const planObj = Object.fromEntries(formData.entries());
         console.log(planObj);
-        const url = "https://two51001-phase01-fk96.onrender.com/plans";
+        const url = "https://two51001-phase01-01.onrender.com/plans";
         // const url = "http://localhost:3000/plans";
         const response = await fetch(url, {
           method: "POST", // #1
