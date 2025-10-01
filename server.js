@@ -50,7 +50,8 @@ app.post("/plans", async (req, res) => {
     return res.status(400).json({ error: error.message });
   }
   res.status(201).json();
-});
+}); // supabase table edtior db 연결
+
 // DOM listener / server '대기' -> 특정한 요청. -> 응답.
 app.listen(port, () => {
   console.log(`서버가 ${port}번 포트로 실행 중입니다.`);
