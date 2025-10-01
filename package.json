@@ -8,12 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kimjava911/251001_phase01.git"
+    "url": "git+https://github.com/gudals2040/251001_phase01.git"
   },
+  "homepage": "https://github.com/gudals2040/251001_phase01",
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^5.1.0"
   },
   "devDependencies": {

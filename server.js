@@ -2,11 +2,16 @@
 // es-module -> import, commonjs -> require
 const express = require("express"); // express 안에 있는 이미 구현되어 있는 코드들을 express 객체 형태로 불러오겠다
 
+const cors = require("cors");
+
 const app = express(); // () -> 호출해서 사용하겠다
 // 포트 -> 컴퓨터 서비스가 1개만 있는게 아님. email, db, server 1, server 2...
 // 1 ~ 2xxxx. => 이 번호로 오세요...
 const port = 3000; // cra. next -> express. / 5173.
 // localhost -> 3000. / 5500? <-> 구분해주는 의미.
+
+// CORS 해결을 미들웨어 적용
+app.use(cors()); // 모든 출처에 대한 허용 ( 보안적으로 바람적하지 X);
 
 // get, post...
 // app.방식(접속경로, 핸들러)
@@ -14,7 +19,8 @@ const port = 3000; // cra. next -> express. / 5173.
 app.get("/", (req, res) => {
   // req -> request -> 전달 받은 데이터나 요청사항
   // res -> response -> 응답할 내용/방식을 담은 객체
-  res.send("hello");
+  // res.send("hello");
+  res.send("bye");
 });
 
 // DOM listener / server '대기' -> 특정한 요청. -> 응답.
