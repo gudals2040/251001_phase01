@@ -11,11 +11,17 @@
         gap: 6px;
         max-width: 240px;
       }
+
+      /* 가로폭 제한 */
+      .tourImg {
+        max-width: 480px;
+        width: 100%;
+      }
     </style>
   </head>
   <body>
     <section>
-     <form id="planForm">
+      <form id="planForm">
         <!-- value를 통한 기본값 입력 -->
         <input type="text" name="destination" placeholder="장소" value="파리" />
         <input
@@ -51,7 +57,7 @@
       const planBox = document.querySelector("#planBox");
       const planForm = document.querySelector("#planForm");
       // API 서버 주소
-      // const apiServerUrl = "https://two51001-phase01-01.onrender.com";
+      // const apiServerUrl = "https://two51001-phase01.onrender.com";
       const apiServerUrl = "http://localhost:3000";
       // 함수
       async function renderPlans() {
@@ -71,6 +77,11 @@
             <div>[추천계획] ${p.ai_suggestion}</div>
             <div>[최소예산] ${p.ai_min_budget}</div>
             <div>[최대예산] ${p.ai_max_budget}</div>
+            ${
+              p.image_url
+                ? `<div><img class="tourImg" src=${p.image_url}></div>`
+                : ""
+            }
           `;
           const removeBtn = document.createElement("button");
           removeBtn.textContent = "삭제";
@@ -97,21 +108,20 @@
       // 폼 처리
       planForm.addEventListener("submit", async (event) => {
         event.preventDefault();
-        // 파일을 추가하면 json이 아님 -< Multipart -> 브라우저가 알아서 해줌
+        // 파일을 추가하면 JSON이 아님 -> Multipart -> 브라우저가 알아서 해줌
         const formData = new FormData(event.currentTarget);
         console.log(...formData.entries());
-        // Json -> Multipart로 전환
-        //const planObj = Object.fromEntries(formData.entries());
-        //console.log(planObj);
+        // JSON -> Multipart로 전환
+        // const planObj = Object.fromEntries(formData.entries());
+        // console.log(planObj);
         // 추가하는 URL
         const response = await fetch(`${apiServerUrl}/plans`, {
-          method: "POST", // #1
-          //headers: {
-          //  "Content-Type": "application/json", // #2
-          //},
-          // body: JSON.stringify(planObj), // #3
-          body: formData, // body에 직접 formData를 넣으면 브라우저가 알아서 header를 넣어줌.
-          
+          method: "POST",
+          // headers: {
+          //   "Content-Type": "application/json", // 수동으로 해주는 것
+          // },
+          // body: JSON.stringify(planObj),
+          body: formData, // body에 직접 formData를 넣으면 브라우저가 알아서 header를 넣어줌
         });
         if (!response.ok) {
           return alert("생성 과정에서 에러가 발생했습니다!");
