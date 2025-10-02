@@ -57,13 +57,19 @@ app.post("/plans", upload.single("image"), async (req, res) => {
       .from("tour-images") // 버킷명
       .getPublicUrl(filename); // 생성파일 이름 -> 공개 URL
     plan.image_url = urlData.publicUrl; // 내가 업로드한 파일의 접속 링크 -> DB
-  
+
     // 이미지 분석
     const analysis = await analyzeImage(req.file.buffer, req.file.mimetype);
     console.log(analysis);
     const { gemini, groq } = analysis;
-    plan.purpose += `\n뒤는 목적과 관련된 사진에 대한 설명입니다.${gemini}`
-    plan.purpose += `\n뒤는 목적과 관련된 사진에 대한 설명입니다.${groq}`;
+    plan.purpose += `\n뒤는 목적과 관련된 사진에 대한 설명입니다. ${gemini}`;
+    plan.purpose += `\n뒤는 목적과 관련된 사진에 대한 설명입니다. ${groq}`;
+  } else {
+    // 이미지가 없을 때
+    console.log("감지된 이미지 파일 없음");
+    const genImage = await generateImage(plan);
+    plan.image_url = genImage;
+    console.log("생성된 이미지 주소", genImage);
   }
   const result = await chaining(plan);
   plan.ai_suggestion = result;
@@ -80,10 +86,24 @@ app.post("/plans", upload.single("image"), async (req, res) => {
 
 app.delete("/plans", async (req, res) => {
   const { planId } = req.body;
+  // 데이터를 한 번 불러오기
+  const { data } = await supabase
+    .from("tour_plan")
+    .select("image_url")
+    .eq("id", planId)
+    .single(); // 한 개의 객체
+  // 삭제
   const { error } = await supabase.from("tour_plan").delete().eq("id", planId);
   if (error) {
     return res.status(400).json({ error: error.message });
   }
+  // 삭제 성공 시에 이미지도 삭제
+  if (data.image_url) {
+    // url -> filename
+    const filename = data.image_url.split("/").pop(); // .../파일명.확장자 -> pop() 가장 마지막 요소를 return
+    await supabase.storage.from("tour-images").remove(filename);
+  }
+
   res.status(204).json();
 });
 
@@ -173,18 +193,19 @@ async function ensemble(result) {
   );
   console.log(responses);
   // NaN 문제 해결
-return {
-  minBudget: Math.min(
-    ...responses.map((v) => v.min_budget).filter((v) => v !== NaN)
-  ),
-  maxBudget: Math.max(
-    ...responses.map((v) => v.max_budget).filter((v) => v !== NaN)
-  ),
-};
+  return {
+    minBudget: Math.min(
+      ...responses.map((v) => v.min_budget).filter((v) => v !== NaN)
+    ),
+    maxBudget: Math.max(
+      ...responses.map((v) => v.max_budget).filter((v) => v !== NaN)
+    ),
+  };
 }
 
 async function analyzeImage(buffer, mimeType) {
   // Gemini 호출
+  console.log("Gemini Vision 분석 중");
   const ai = new GoogleGenAI({});
   const visionPrompt =
     "제공 받은 여행 관련 이미지를 분석하여, 어떠한 장소인지 어떠한 목적을 기대할 수 있는지를 한국어로 200자 이내로 적어주세요.";
@@ -207,6 +228,7 @@ async function analyzeImage(buffer, mimeType) {
     ],
   });
   // Groq 호출
+  console.log("Groq Vision 분석 중");
   const groq = new Groq();
   const groqResponse = await groq.chat.completions.create({
     // https://console.groq.com/docs/vision
@@ -224,15 +246,52 @@ async function analyzeImage(buffer, mimeType) {
             type: "image_url",
             image_url: {
               url: `data:${mimeType};base64,${b64}`,
-            }
-          }
-        ]
-      }
-    ]
-  })
+            },
+          },
+        ],
+      },
+    ],
+  });
 
   return {
     gemini: geminiResponse.text,
     groq: groqResponse.choices[0].message.content,
   };
+}
+
+async function generateImage(plan) {
+  const ai = new GoogleGenAI({});
+  const imagePrompt = `${plan.destination}의 아름다운 풍경 사진, ${plan.purpose}를 목적로 한 여행. ${plan.people_count}명의 여행.사실적인 사진 스타일`;
+  console.log(imagePrompt);
+  const response = await ai.models.generateContent({
+    // https://ai.google.dev/gemini-api/docs/models?hl=ko#gemini-2.0-flash-image
+    model: "gemini-2.0-flash-preview-image-generation",
+    contents: imagePrompt,
+    config: {
+      responseModalities: ["TEXT", "IMAGE"],
+    },
+  });
+  // console.log(response.candidates[0].content.parts);
+  // const imageData = response.candidates[0].content.parts[0].inlineData.data;
+  const parts = response.candidates[0].content.parts;
+  const p0 = parts[0]?.inlineData?.data;
+  const p1 = parts[1]?.inlineData?.data;
+  const imageData = p0 || p1;
+  const imageBuffer = Buffer.from(imageData, "base64");
+
+  const filename = `gen_${Date.now()}.jpg`;
+  const { error: uploadError } = await supabase.storage
+    .from("tour-images")
+    .upload(filename, imageBuffer, {
+      contentType: "image/jpeg",
+    });
+
+  if (uploadError) {
+    console.error("업로드 실패");
+    return;
+  }
+  const { data: urlData } = supabase.storage
+    .from("tour-images") // 버킷명
+    .getPublicUrl(filename); // 생성파일 이름 -> 공개 URL
+  return urlData.publicUrl; // 내가 업로드한 파일의 접속 링크 -> DB
 }
