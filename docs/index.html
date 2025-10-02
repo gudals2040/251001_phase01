@@ -35,11 +35,13 @@
       // DOM
       const planBox = document.querySelector("#planBox");
       const planForm = document.querySelector("#planForm");
+      // API 서버 주소
+      // const apiServerUrl = "https://two51001-phase01-01.onrender.com";
+      const apiServerUrl = "http://localhost:3000";
       // 함수
       async function renderPlans() {
-        //const url = "http://localhost:3000/plans";
-        const url = "https://two51001-phase01-01.onrender.com/plans";
-        const response = await fetch(url);
+        // 불러오는 API
+        const response = await fetch(`${apiServerUrl}/plans`);
         const data = await response.json();
         console.log(data);
         planBox.innerHTML = "";
@@ -58,16 +60,14 @@
           const removeBtn = document.createElement("button");
           removeBtn.textContent = "삭제";
           removeBtn.addEventListener("click", async () => {
-            // const planId = p.id;
             const { id: planId } = p;
-            const url = "https://two51001-phase01-01.onrender.com/plans";
-            // const url = "http://localhost:3000/plans";
-            const response = await fetch(url, {
-              method: "DELETE", // #1
+            // 삭제하는 API
+            const response = await fetch(`${apiServerUrl}/plans`, {
+              method: "DELETE",
               headers: {
-                "Content-Type": "application/json", // #2
+                "Content-Type": "application/json",
               },
-              body: JSON.stringify({ planId }), // #3
+              body: JSON.stringify({ planId }),
             });
             if (!response.ok) {
               return alert("삭제 과정에서 에러가 발생했습니다!");
@@ -80,17 +80,13 @@
         }
       }
       planForm.addEventListener("submit", async (event) => {
-        // event 타입을 IDE가 인식해서 메서드나 값들을 사용할 수 있음
-        event.preventDefault(); // Form 기본 이동 막기
+        event.preventDefault();
         const formData = new FormData(event.currentTarget);
-        // planForm을 넣어도 괜찮음.
         console.log(...formData.entries());
-        // fromEntries -> 객체화
         const planObj = Object.fromEntries(formData.entries());
         console.log(planObj);
-        const url = "https://two51001-phase01-01.onrender.com/plans";
-        // const url = "http://localhost:3000/plans";
-        const response = await fetch(url, {
+        // 추가하는 URL
+        const response = await fetch(`${apiServerUrl}/plans`, {
           method: "POST", // #1
           headers: {
             "Content-Type": "application/json", // #2
