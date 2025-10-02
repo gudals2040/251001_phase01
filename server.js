@@ -6,14 +6,22 @@ const dotenv = require("dotenv");
 const { createClient } = require("@supabase/supabase-js"); // 구조분해 할당
 const { GoogleGenAI } = require("@google/genai");
 const { Groq } = require("groq-sdk");
+
+// npm install multer
+const multer = require("multer"); // 미들웨어 -> 변환, 체크.
+
 dotenv.config(); // .env -> key
 // NODE -> process.env (환경변수) // cf. env file
-
 const supabaseKey = process.env.SUPABASE_KEY;
 const supabaseUrl = process.env.SUPABASE_URL;
 console.log("supabaseKey : ", supabaseKey); // 확인 방법 : (npm run dev)
 console.log("supabaseUrl : ", supabaseUrl);
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// 파일처리 (multer)
+// 파일 처리
+const storage = multer.memoryStorage(); // 메모리 -> 실행할 때 임시로 파일 관리
+const upload = multer({ storage }); // 업로드를 처리해주는 미들웨어
 
 const app = express(); // () -> 호출해서 사용하겠다
 // 포트 -> 컴퓨터 서비스가 1개만 있는게 아님. email, db, server 1, server 2...
