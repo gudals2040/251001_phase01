@@ -57,6 +57,13 @@ app.post("/plans", upload.single("image"), async (req, res) => {
       .from("tour-images") // 버킷명
       .getPublicUrl(filename); // 생성파일 이름 -> 공개 URL
     plan.image_url = urlData.publicUrl; // 내가 업로드한 파일의 접속 링크 -> DB
+  
+    // 이미지 분석
+    const analysis = await analyzeImage(req.file.buffer, req.file.mimetype);
+    console.log(analysis);
+    const { gemini, groq } = analysis;
+    plan.purpose += `\n뒤는 목적과 관련된 사진에 대한 설명입니다.${gemini}`
+    plan.purpose += `\n뒤는 목적과 관련된 사진에 대한 설명입니다.${groq}`;
   }
   const result = await chaining(plan);
   plan.ai_suggestion = result;
@@ -165,8 +172,67 @@ async function ensemble(result) {
     })
   );
   console.log(responses);
+  // NaN 문제 해결
+return {
+  minBudget: Math.min(
+    ...responses.map((v) => v.min_budget).filter((v) => v !== NaN)
+  ),
+  maxBudget: Math.max(
+    ...responses.map((v) => v.max_budget).filter((v) => v !== NaN)
+  ),
+};
+}
+
+async function analyzeImage(buffer, mimeType) {
+  // Gemini 호출
+  const ai = new GoogleGenAI({});
+  const visionPrompt =
+    "제공 받은 여행 관련 이미지를 분석하여, 어떠한 장소인지 어떠한 목적을 기대할 수 있는지를 한국어로 200자 이내로 적어주세요.";
+  const b64 = buffer.toString("base64");
+  const geminiResponse = await ai.models.generateContent({
+    // https://ai.google.dev/gemini-api/docs/models?hl=ko
+    model: "gemini-2.5-flash", // "gemini-2.5-flash-lite",
+    contents: [
+      {
+        parts: [
+          { text: visionPrompt },
+          {
+            inlineData: {
+              data: b64,
+              mimeType,
+            },
+          },
+        ],
+      },
+    ],
+  });
+  // Groq 호출
+  const groq = new Groq();
+  const groqResponse = await groq.chat.completions.create({
+    // https://console.groq.com/docs/vision
+    model: "meta-llama/llama-4-scout-17b-16e-instruct",
+    // meta-llama/llama-4-maverick-17b-128e-instruct
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: visionPrompt,
+          },
+          {
+            type: "image_url",
+            image_url: {
+              url: `data:${mimeType};base64,${b64}`,
+            }
+          }
+        ]
+      }
+    ]
+  })
+
   return {
-    minBudget: Math.min(...responses.map((v) => v.min_budget)),
-    maxBudget: Math.max(...responses.map((v) => v.max_budget)),
+    gemini: geminiResponse.text,
+    groq: groqResponse.choices[0].message.content,
   };
 }
